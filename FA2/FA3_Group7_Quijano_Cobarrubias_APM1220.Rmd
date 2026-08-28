@@ -1,0 +1,510 @@
+---
+title: "FA3_APM1220"
+author: "Julian Philip S. Quijano - Ivan C. Cobarrubias"
+date: "2026-08-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(MASS)
+library(corrplot)
+```
+
+This simulation study investigates the relationships among three academic variables: weekly study hours, assignment scores, and exam scores. The variables are assumed to follow a multivariate normal distribution with specified population means, variances, and correlations. A sample of at least 1,000 observations is generated from this population to investigate the properties of the simulated data.
+
+```{r}
+# 4.1 A.
+
+# Mean Vector
+mu <- c(
+  10, # X1 weekly study hours
+  75, # X2 assignment scores
+  80 # X3 exam scores
+)
+
+# Standard Deviations
+sd <- c(
+  3,
+  10,
+  10
+)
+
+# Correlation Matrix
+R <- matrix(c(
+  1.00, 0.50, 0.60,
+  0.50, 1.00, 0.70,
+  0.60, 0.70, 1.00
+), nrow = 3, byrow=TRUE)
+
+# Covariance Matrix
+Sigma <- diag(sd) %*% R %*% diag(sd)
+
+Sigma
+
+theoretical_means <- mu
+theoretical_variances <- diag(Sigma)
+theoretical_covariances <- Sigma
+theoretical_correlations <- R
+```
+
+The covariance matrix is appropriate because more studying is expected to be associated with higher academic performance, while assignment and exam scores are also expected to be positively related.
+
+```{r}
+set.seed(123)
+# B.
+n = 1000
+
+sim_data <- mvrnorm(
+  n = n,
+  mu = mu,
+  Sigma = Sigma
+)
+
+sim_data <- as.data.frame(sim_data)
+
+names(sim_data) <- c(
+  "Study_Hours",
+  "Assignment_Scores",
+  "Exam_Scores"
+)
+
+head(sim_data, 10)
+
+# Descriptive Statistics
+sim_mean <- colMeans(sim_data)
+sim_var <- apply(sim_data, 2, var)
+sim_cov <- cov(sim_data)
+sim_cor <- cor(sim_data)
+
+cat("\nSimulated Mean\n")
+sim_mean
+cat("\nSimulated Variance\n")
+sim_var
+cat("\nSimulated Covariance Matrix\n")
+sim_cov
+cat("\nSimulated Correlation Matrix\n")
+sim_cor
+cat("\n")
+```
+
+```{r}
+# Comparing Statistics
+
+# Compare means
+data.frame(
+  Variable = names(sim_data),
+  Theoretical_Mean = theoretical_means,
+  Simulated_Mean = sim_mean
+)
+
+# Compare variances
+data.frame(
+  Variable = names(sim_data),
+  Theoretical_Variance = theoretical_variances,
+  Simulated_Variance = sim_var
+)
+
+# Compare Correlation Matrix
+theoretical_correlations
+sim_cor
+```
+
+```{r}
+# Visualization
+pairs(
+  sim_data,
+  main = "Scatterplot Matrix of Simulated Data",
+  pch = 19
+)
+
+par(mfrow = c(1, 3))
+
+hist(
+  sim_data$Study_Hours,
+  main = "Weekly Study Hours",
+  xlab = "Study Hours",
+  col = "lightblue",
+  breaks = 30
+)
+
+hist(
+  sim_data$Assignment_Score,
+  main = "Assignment Scores",
+  xlab = "Assignment Score",
+  col = "lightgreen",
+  breaks = 30
+)
+
+hist(
+  sim_data$Exam_Score,
+  main = "Exam Scores",
+  xlab = "Exam Score",
+  col = "lightpink",
+  breaks = 30
+)
+
+par(mfrow = c(1,1))
+
+corrplot(
+  cor(sim_data),
+  method = "color",
+  type = "upper",
+  addCoef.col = "black",
+  tl.col = "black",
+  title = "Correlation Matrix",
+  mar = c(0, 0, 2, 0)
+)
+```
+
+The simulated means were close to the theoretical means of 10 weekly study hours, 75 assignment points, and 80 exam points. Small differences between the theoretical and simulated means are expected because the data were generated randomly.
+
+The simulated variances were also reasonably close to the theoretical variances of 9, 100, and 100 for weekly study hours, assignment scores, and exam scores, respectively. The differences are attributable to sampling variation.
+
+The simulated correlations reflected the theoretical correlation matrix. The expected correlations were 0.50 between study hours and assignment scores, 0.60 between study hours and exam scores, and 0.70 between assignment scores and exam scores. The scatterplot matrix showed positive linear relationships between all three variables, with the strongest relationship expected between assignment and exam scores.
+
+The histograms showed approximately bell-shaped distributions, which is consistent with the assumption of multivariate normality. Overall, the simulated data behaved as expected under the specified multivariate normal distribution.
+
+```{r}
+# C.
+set.seed(123)
+
+n <- 1000
+
+mu_2 <- c(
+  10,  # Study Hours
+  80   # Exam Score
+)
+
+sd_2 <- c(
+  3,   # Study Hours
+  10   # Exam Score
+)
+
+# Correlations to compare (given in the FA)
+correlations <- c(0, 0.50, 0.90)
+
+simulations <- list()
+
+for (r in correlations) {
+  
+  Sigma_r <- matrix(c(
+    sd_2[1]^2, r * sd_2[1] * sd_2[2],
+    r * sd_2[1] * sd_2[2], sd_2[2]^2
+  ), nrow = 2, byrow = TRUE)
+  
+  data_r <- mvrnorm(
+    n = n,
+    mu = mu_2,
+    Sigma = Sigma_r
+  )
+  
+  data_r <- as.data.frame(data_r)
+  
+  names(data_r) <- c(
+    "Study_Hours",
+    "Exam_Score"
+  )
+  
+  simulations[[paste0("rho_", r)]] <- data_r
+}
+
+head(simulations$rho_0)
+head(simulations$rho_0.5)
+head(simulations$rho_0.9)
+```
+
+```{r}
+# Visualization
+
+par(mfrow = c(1, 3))
+
+# rho = 0
+plot(
+  simulations$rho_0$Study_Hours,
+  simulations$rho_0$Exam_Score,
+  main = expression(rho == 0),
+  xlab = "Weekly Study Hours",
+  ylab = "Exam Score",
+  pch = 19,
+)
+
+# rho = 0.50
+plot(
+  simulations$rho_0.5$Study_Hours,
+  simulations$rho_0.5$Exam_Score,
+  main = expression(rho == 0.50),
+  xlab = "Weekly Study Hours",
+  ylab = "Exam Score",
+  pch = 19,
+)
+
+# rho = 0.90
+plot(
+  simulations$rho_0.9$Study_Hours,
+  simulations$rho_0.9$Exam_Score,
+  main = expression(rho == 0.90),
+  xlab = "Weekly Study Hours",
+  ylab = "Exam Score",
+  pch = 19,
+)
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+# Checking correlation matrixes
+
+# rho_0
+cor(simulations$rho_0$Study_Hours,
+    simulations$rho_0$Exam_Score)
+
+# rho_0.5
+cor(simulations$rho_0.5$Study_Hours,
+    simulations$rho_0.5$Exam_Score)
+
+# rho_0.9
+cor(simulations$rho_0.9$Study_Hours,
+    simulations$rho_0.9$Exam_Score)
+```
+
+The simulation demonstrates the effect of increasing positive correlation between weekly study hours and exam scores. When rho = 0, the observations form an approximately circular or elliptical cloud with no particular orientation. This indicates that knowing a student's study hours provides little information about their exam score.
+
+When the correlation increases to rho = 0.50, the observations become more elongated and show a clear positive orientation. Students with higher study hours tend to have higher exam scores. The probability is therefore more concentrated around a positively sloped line.
+
+When the correlation increases further to rho = 0.90 , the observations become much more tightly concentrated around a positively sloped line. This represents a strong positive linear association: observations with higher study hours are much more likely to have higher exam scores.
+
+Therefore, increasing the magnitude of the positive correlation reduces the spread of the observations perpendicular to the main direction of the data. At high correlation, the probability mass becomes increasingly concentrated around a line. When the correlation is zero, there is no preferred linear direction and the probability is distributed more evenly around the center.
+
+This simulation illustrates that correlation determines the orientation and shape of the bivariate normal distribution. A correlation close to zero produces a more circular cloud, while a correlation close to one produces a narrow, elongated cloud along a positively sloped line.
+
+```{r}
+# 4.4. D.
+
+# Coefficient vector
+a <- c(1, 1, -1)
+
+# Linear combination: Y = X1 + X2 - X3 (using the same variables earlier)
+
+# theoretical mean
+theoretical_mean <- as.numeric(t(a) %*% mu)
+
+# theoretical variance
+theoretical_variance <- as.numeric(t(a) %*% Sigma %*% a)
+
+# Calculate the linear combination for every observation
+sim_data$Y <- with(
+  sim_data,
+  Study_Hours + Assignment_Scores - Exam_Scores
+)
+
+# simulated mean
+simulated_mean <- mean(sim_data$Y)
+
+# simulated variance
+simulated_variance <- var(sim_data$Y)
+
+comparison <- data.frame(
+  Statistic = c("Mean", "Variance"),
+  Theoretical = c(
+    theoretical_mean,
+    theoretical_variance
+  ),
+  Simulated = c(
+    simulated_mean,
+    simulated_variance
+  )
+)
+
+comparison
+```
+
+```{r}
+# Visualization
+hist(
+  sim_data$Y,
+  probability = TRUE,
+  breaks = 30,
+  col = "blue",
+  border = "white",
+  main = "Distribution of the Linear Combination Y",
+  xlab = "Y = Study Hours + Assignment Score - Exam Score"
+)
+
+# Add theoretical normal density
+curve(
+  dnorm(
+    x,
+    mean = theoretical_mean,
+    sd = sqrt(theoretical_variance)
+  ),
+  add = TRUE,
+  col = "red",
+  lwd = 2
+)
+```
+The simulated mean and variance were 4.61 and 65.16, respectively. These values were close to the theoretical mean of 5 and theoretical variance of 63. Small differences are expected because the simulated results are based on a finite random sample of 1,000 observations.
+
+The histogram of the simulated linear combination was approximately bell-shaped and closely followed the theoretical normal density. This provides visual evidence that the simulated linear combination follows the theoretical normal distribution.
+
+Overall, the simulation supports the theoretical result that a linear combination of a multivariate normal random vector is also normally distributed.
+
+```{r}
+# 4.5 E.
+Sigma_inv <- solve(Sigma)
+
+Sigma_inv
+
+# Remove Y because Mahalanobis distance should use the original three variables
+X <- as.matrix(
+  sim_data[, c(
+    "Study_Hours",
+    "Assignment_Scores",
+    "Exam_Scores"
+  )]
+)
+
+# Calculate Mahalanobis distance squared
+D2 <- apply(
+  X,
+  1,
+  function(x) {
+    diff <- x - mu
+    as.numeric(t(diff) %*% Sigma_inv %*% diff)
+  }
+)
+
+sim_data$D2 <- D2
+
+head(sim_data$D2)
+```
+
+```{r}
+# Visualization
+hist(
+  sim_data$D2,
+  probability = TRUE,
+  breaks = 30,
+  col = "lightblue",
+  border = "white",
+  main = expression(
+    "Simulated Mahalanobis Distance Squared (" * D^2 * ")"
+  ),
+  xlab = expression(D^2)
+)
+
+# theoretical Chi-square distribution
+curve(
+  dchisq(x, df = 3),
+  add = TRUE,
+  col = "red",
+  lwd = 2
+)
+
+```
+```{r}
+critical_90 <- qchisq(0.90, df = 3)
+critical_90
+
+proportion_inside_90 <- mean(
+  sim_data$D2 <= critical_90
+)
+proportion_inside_90
+```
+For observations generated from the specified multivariate normal distribution, approximately 90% should have a Mahalanobis distance squared less than or equal to 6.251.
+
+Approximately 90.8% of the simulated observations fell within the theoretical 90% Mahalanobis region.
+
+```{r}
+# 5. Option C
+
+# We investigate Exam Score given Study Hours = 13
+
+# Values from Part A
+mu_exam <- 80
+mu_study <- 10
+
+var_exam <- 100
+var_study <- 9
+
+cov_exam_study <- 18
+
+# Value we are conditioning on
+study_value <- 13
+
+# Theoretical conditional mean
+conditional_mean <- mu_exam +
+  (cov_exam_study / var_study) *
+  (study_value - mu_study)
+
+# Theoretical conditional variance
+conditional_variance <- var_exam -
+  (cov_exam_study^2 / var_study)
+
+# Conditional standard deviation
+conditional_sd <- sqrt(conditional_variance)
+
+conditional_mean
+conditional_variance
+conditional_sd
+
+# Select observations with study hours close to 13
+conditional_data <- subset(
+  sim_data,
+  Study_Hours >= 12.9 &
+  Study_Hours <= 13.1
+)
+
+# Number of observations selected
+nrow(conditional_data)
+
+# Simulated conditional mean
+sim_conditional_mean <- mean(
+  conditional_data$Exam_Scores
+)
+
+# Simulated conditional variance
+sim_conditional_variance <- var(
+  conditional_data$Exam_Scores
+)
+
+# Simulated conditional standard deviation
+sim_conditional_sd <- sd(
+  conditional_data$Exam_Scores
+)
+
+sim_conditional_mean
+sim_conditional_variance
+sim_conditional_sd
+
+conditional_comparison <- data.frame(
+  Statistic = c(
+    "Mean",
+    "Variance",
+    "Standard Deviation"
+  ),
+  Theoretical = c(
+    conditional_mean,
+    conditional_variance,
+    conditional_sd
+  ),
+  Simulated = c(
+    sim_conditional_mean,
+    sim_conditional_variance,
+    sim_conditional_sd
+  )
+)
+
+conditional_comparison
+```
+
+The conditional distribution investigated was the distribution of exam scores given that weekly study hours were approximately 13 hours. The theoretical conditional distribution had a mean of 86 and a variance of 64, corresponding to a standard deviation of 8.
+
+From the simulated data, the conditional mean was 86.73, which was reasonably close to the theoretical mean of 86. However, the simulated variance was 34.78, which was lower than the theoretical variance of 64, with a simulated standard deviation of 5.90 compared with the theoretical value of 8.
+
+The simulated mean therefore provided reasonable support for the theoretical conditional distribution, while the variance showed a larger difference. This difference may be due to the simulation using observations within a small range around 13 study hours rather than conditioning on the exact value of 13, as well as sampling variation within the selected subset.
+
+The results nevertheless illustrate the main concept of a conditional distribution. Because study hours and exam scores are positively correlated, knowing a student's study hours provides information about their expected exam score. In this case, conditioning on approximately 13 study hours increased the expected exam score from the overall mean of 80 to approximately 86.73 in the simulation. Overall, the simulation provides reasonable evidence for the theoretical conditional mean and demonstrates how information about one variable can affect the distribution of another variable in a multivariate normal distribution.
