@@ -1,0 +1,423 @@
+---
+title: "FA4_APM1220_Quijano"
+author: "Julian Philip S. Quijano"
+date: "2026-09-17"
+output:
+  pdf_document: default
+  html_document: default
+header-includes: \usepackage{amsmath}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ICSNP)
+library(poolr)
+library(car)
+```
+
+### 1. Hotelling's $T^2$ Test for a Mean Vector
+
+(a) Evaluate $T^2$ for testing the null hypothesis $H_0$ : $\mu^T$ = [7, 11].
+
+```{r}
+x <- matrix(c(2, 12, 8, 9, 6, 9, 8, 10), nrow=4, ncol=2, byrow=TRUE)
+x
+
+n <- nrow(x)
+p <- ncol(x)
+
+t2 <- HotellingsT2(x, mu = c(7, 11))
+t2$statistic
+```
+
+(b) Specify the exact distribution of $T^2$ under the null hypothesis for this situation.
+
+    The exact distribution is:
+
+    $\frac{n-p}{p(n-1)}T^2$ \~ $F_{p, n-p}$
+
+    Given n (rows) = 4, p (columns) = 2:
+
+    $\frac{4-2}{2(4-1)}T^2$ = $\frac{T^2}{3}$
+
+    Thus, the exact distribution of $T^2$ under the null hypothesis is:
+
+    $T^2$ \~ $3F_{2, 2}$
+
+(c) Using parts (a) and (b), test $H_0$ at the significance level $\alpha$ = 0.05. What statistical conclusion do you reach?
+
+```{r}
+Fstat <- ((n - p) / (p * (n - 1))) * t2$statistic
+Fstat
+
+# Critical value
+qf(0.95, p, n - p)
+
+# p-value
+pf(Fstat, p, n - p, lower.tail = FALSE)
+```
+
+With a significance level of $\alpha$ = 0.05, we acquire $F_{0.95,2,2}$ = 19. Since the F-statistic = 1.515152 \< 19 we fail to reject $H_0$ at $\alpha$ = 0.05.
+
+### 2. Simultaneous Confidence Intervals and Regions for Grizzly Bear Body Measurements
+
+```{r}
+n <- 61
+p <- 6 # variables in order are: Weight, Body Length, Neck, Girth, Head Length, Head Width
+
+xbar <- c(95.52, 164.38, 55.69, 93.39, 17.98, 31.13)
+
+S <- matrix(c(
+  3266.46, 1343.97, 731.54, 1175.50, 162.68, 238.37,
+  1343.97, 721.91, 324.25, 537.35, 80.17, 117.73,
+  731.54, 324.25, 179.28, 281.17, 39.15, 56.80,
+  1175.50, 537.35, 281.17, 474.98, 63.73, 94.85,
+  162.68, 80.17, 39.15, 63.73, 9.95, 13.88,
+  238.37, 117.73, 56.80, 94.85, 13.88, 21.26
+), nrow = 6, byrow = TRUE)
+```
+
+(a) Obtain the large-sample 95% simultaneous confidence intervals for the six population mean body measurements.
+
+```{r}
+critical <- qchisq(0.95, df=6)
+critical
+margin <- sqrt((critical * diag(S))/n)
+margin
+
+lwr_bound <- xbar - margin
+upr_bound <- xbar + margin
+
+cbind(lwr_bound, upr_bound)
+```
+
+(b) Obtain the large-sample 95% simultaneous confidence ellipse for mean weight and mean girth.
+
+```{r}
+# Mean Weight = 95.52, Mean Girth = 93.39
+x_b <- c(xbar[1], xbar[4])
+
+# Covariance Matrix of weight and girth
+s_weight_girth <- matrix(c(
+  3266.46, 1175.50,
+  1175.50, 474.98),
+  nrow=2, ncol=2, byrow=TRUE)
+
+```
+
+The simultaneous confidence ellipse is given by
+
+$$
+(\mu - \bar{x})'S_{WG}^{-1}(\mu - \bar{x}) \leq \frac{\chi^2_{p,1-\alpha}}{n}
+$$
+
+```{r}
+# chi squared
+critical <- qchisq(0.95, df=2)
+
+rhs <- critical/61
+rhs
+```
+
+or approximately
+
+$$
+(\mu - \bar{x})'S_{WG}^{-1}(\mu - \bar{x}) \leq 0.09822073
+$$
+
+Explicitly, this is
+
+$$
+\begin{bmatrix}
+\mu_W - 95.52 \\
+\mu_G - 93.39
+\end{bmatrix}^T
+\begin{bmatrix}
+3266.46 & 1175.50 \\
+1175.50 & 474.98
+\end{bmatrix}^{-1}
+\begin{bmatrix}
+\mu_W - 95.52 \\
+\mu_G - 93.39
+\end{bmatrix} \leq 0.09822073
+$$
+
+(c) Obtain the 95% Bonferroni confidence intervals for the six means in part (a).
+
+```{r}
+z_bonf <- qnorm(1 - 0.05/(2*6))
+z_bonf
+
+margin_bonf <- z_bonf * sqrt(diag(S)/n)
+
+lower_bonf <- xbar - margin_bonf
+upper_bonf <- xbar + margin_bonf
+
+bonf_intervals <- cbind(lower_bonf, upper_bonf)
+bonf_intervals
+```
+
+(d) Refer to part (b). Construct the 95% Bonferroni confidence rectangle for mean weight and
+mean girth using m = 6. Compare this rectangle with the simultaneous confidence ellipse
+in part (b).
+
+With m = 6, we still use $z^*$ = 2.638257.
+Thus, for weight
+$$
+95.52 \pm 2.638257\sqrt{\frac{3266.46}{61}} \\
+76.21406 < \mu_W < 114.82594 \\
+$$
+and girth
+$$
+93.39 \pm 2.638257\sqrt{\frac{474.98}{61}} \\
+86.02810 < \mu_G < 100.75190 \\
+$$
+
+(e) Obtain the 95% Bonferroni confidence interval for (mean head width - mean head length)
+using m = 6 + 1 = 7 to allow for this statement as well as statements about each individual
+mean.
+
+```{r}
+difference <- xbar[6] - xbar[5]
+
+variance <- S[6,6] + S[5,5] - 2*S[6,5]
+
+SE <- sqrt(variance / n)
+
+m <- 7
+
+z <- qnorm(1 - 0.05/(2*m))
+
+lower <- difference - z*SE
+upper <- difference + z*SE
+
+c(lower, upper)
+```
+### 3. Mineral Analysis of Ancient Peruvian Hairs
+
+```{r}
+Cr <- c(.48, 40.53, 2.19, .55, .74, .66, .93, .37, .22)
+
+St <- c(12.57, 73.68, 11.13, 20.03, 20.29, .78, 4.64, .43, 1.08)
+n = 9
+
+hair <- cbind(Cr, St)
+
+hair
+```
+
+(a) Construct and plot a 90% joint confidence ellipse for the population mean vector $\mu^T$ = [$\mu_1$, $\mu_2$], 
+assuming these nine hairs represent a random sample from a particular ancient Peruvian culture.
+
+```{r}
+x_bar <- colMeans(hair)
+x_bar
+s <- cov(hair)
+
+critical <- qchisq(0.90, df=2)
+
+dataEllipse(
+  hair[,1],
+  hair[,2],
+  levels = 0.90,
+  xlab = "Chromium(ppm)",
+  ylab = "Strontium(ppm)"
+)
+```
+
+(b) Obtain the individual simultaneous 90% confidence intervals for $\mu_1$ and $\mu_2$ by projecting the
+ellipse constructed in part (a) onto each coordinate axis. Does it appear as if this Peruvian
+culture has a mean strontium level of 10? That is, are any of the points ($\mu_1$, arbitrary, 10)
+in the confidence region? Is [.30, 10]' a plausible value for $\mu$? Discuss.
+
+```{r}
+margin <- sqrt(
+  qchisq(0.90, df = 2) * diag(s) / n
+)
+
+lower <- x_bar - margin
+upper <- x_bar + margin
+
+cbind(lower, upper)
+```
+Yes, it is plausible with a 90% confidence interval that a point exists with strontium = 10 as it is within the interval.
+As for [.30, 10],
+```{r}
+mu0 <- c(0.30,10)
+
+d <- mu0 - x_bar
+
+t <- n * t(d) %*% solve(s) %*% d
+
+t
+critical
+```
+Given that T = 1.772481 < $\chi^2_{2,0.90}$, the point exists within the ellipse and is thus possible.
+
+(c) Do these data appear to be bivariate normal? Discuss their status with reference to Q-Q
+plots and a scatter diagram. If the data are not bivariate normal, what implications does
+this have for the results in parts (a) and (b)?
+
+```{r}
+# Q-Q Plots
+qqnorm(Cr, main="Chromium QQ plot")
+qqline(Cr)
+
+qqnorm(St, main="Strontium QQ plot")
+qqline(St)
+
+# Scatterplot
+plot(
+  Cr,
+  St
+)
+```
+The data does not appear to be bivariate normal with most observations packed to the left and an outlier very far to the right.
+This means that the results for (a) and (b) must be treated cautiously as they do not follow the necessary assumptions.
+
+(d) Repeat the analysis with the obvious ”outlying” observation removed. Do the inferences
+change? Comment.
+
+```{r}
+hair2 <- hair[-2,]
+hair2
+cat("\n")
+n <- 8
+xbar2 <- colMeans(hair2)
+xbar2
+cat("\n")
+
+s2 <- cov(hair2)
+s2
+cat("\n")
+
+margin <- sqrt(
+  qchisq(0.90, df = 2) * diag(s2) / n
+)
+cat("\n")
+
+lower2 <- xbar2 - margin
+upper2 <- xbar2 + margin
+cat("\n")
+
+cbind(lower2, upper2)
+
+mu0 <- c(0.30,10)
+
+d <- mu0 - xbar2
+
+t <- n * t(d) %*% solve(s2) %*% d
+
+t
+critical
+
+dataEllipse(
+  hair2[,1],
+  hair2[,2],
+  levels = 0.90,
+  xlab = "Chromium(ppm)",
+  ylab = "Strontium(ppm)"
+)
+```
+
+Upon removing the outliers, we see changes in the results:
+The ellipse is much smaller than previous,
+[0.30, 10] is now outside the ellipse with a new t = 5.307872 < 4.60517, the critical value,
+10 ppm strontium is also still possible within the 90% confidence interval.
+
+### 4. Lumber Strength Measurements
+
+```{r}
+x1 <- c(
+  1232,1115,2205,1897,1932,1612,1598,1804,1752,2067,
+  2365,1646,1579,1880,1773,
+  1712,1932,1820,1900,2426,1558,1470,1858,1587,2208,
+  1487,2206,2332,2540,2322
+)
+
+x2 <- c(
+  4175,6652,7612,10914,10850,7627,6954,8365,9469,6410,
+  10327,7320,8196,9709,10370,
+  7749,6818,9307,6457,10102,7414,7556,7833,8309,9559,
+  6255,10723,5430,12090,10072
+)
+
+lumber <- cbind(x1, x2)
+```
+
+(a) Construct and sketch a 95% confidence ellipse for the pair [$\mu_1$, $\mu_2$]', where $\mu_1$ = E($X_1$) and
+$\mu_2$ = E($X_2$).
+
+```{r}
+n <- nrow(lumber)
+
+xbar <- colMeans(lumber)
+
+S <- cov(lumber)
+
+critical <- qchisq(0.95, df = 2)
+
+theta <- seq(0, 2*pi, length.out = 500)
+
+circle <- rbind(cos(theta), sin(theta))
+
+ellipse <- xbar +
+  sqrt(critical / n) *
+  t(chol(S)) %*% circle
+
+plot(
+  x1, x2,
+  xlab = "Stiffness",
+  ylab = "Bending strength",
+  main = "95% Confidence Ellipse"
+)
+
+lines(
+  ellipse[1,],
+  ellipse[2,]
+)
+
+points(
+  xbar[1],
+  xbar[2],
+  pch = 19
+)
+```
+
+(b) Suppose $\mu_10$ = 2,000 and $\mu_20$ = 10,000 represent ”typical” values for stiffness and bending
+strength, respectively. Given the result in part (a), are the data consistent with these
+values? Explain.
+
+```{r}
+mu0 <- c(2000, 10000)
+
+d <- mu0 - xbar
+
+T <- n * t(d) %*% solve(S) %*% d
+
+T
+critical
+```
+Since T = 23.64778 > $\chi^2_{2,0.95}$, then the proposed mean vector (2000, 10000)' is excluded from the 95% confidence ellipse region and is not consistent with the given data.
+
+(c) Is the bivariate normal distribution a viable population model? Explain with reference to Q-Q plots and a scatter diagram.
+```{r}
+qqnorm(x1)
+qqline(x1)
+
+qqnorm(x2)
+qqline(x2)
+
+# Scatterplot
+plot(
+  x1, x2,
+  xlab = "Stiffness",
+  ylab = "Bending strength",
+  main = "Stiffness vs Bending Strength"
+)
+```
+Both Q-Q plots showcase a straight diagonal line consistent with a normal distribution. Furthermore, the scatterplot does appear to have an elliptical shape. However, a sample size of n=30 may not be enough to be entirely conclusive.
+
