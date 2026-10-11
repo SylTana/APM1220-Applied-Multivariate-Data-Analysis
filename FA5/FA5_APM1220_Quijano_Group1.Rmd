@@ -1,0 +1,189 @@
+---
+title: "FA5_APM1220_Quijano_Group1"
+author: "Julian Philip S. Quijano"
+date: "2026-10-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+df <- read.csv("world-happiness-report-2021.csv")
+summary(df)
+
+# Use only Ladder Score, Logged GDP per capita, Social Support, Healthy Life Expectancy,
+# Freedom to Make Life Choices, Generosity, Perceptions of Corruption
+
+df_clean <- df %>% 
+  select(Ladder.score,
+         Logged.GDP.per.capita,
+         Social.support,
+         Healthy.life.expectancy,
+         Freedom.to.make.life.choices,
+         Generosity,
+         Perceptions.of.corruption
+         )
+
+dim(df_clean)
+```
+
+### Part A - Data Preparation and Descriptive Analysis
+
+#### 1.) Identify the number of observations and the seven variables used in the analysis. (2 pts)
+
+```{r}
+str(df_clean)
+```
+
+#### 2.) Compute or obtain the mean and standard deviation for each variable. (2 pts)
+
+```{r}
+# Descriptive Statistics
+
+# Mean
+df_clean %>%
+  summarize(across(everything(), ~ round(mean(.x), 3)))
+
+# Standard Deviation
+df_clean %>%
+  summarize(across(everything(), ~ round(sd(.x), 3)))
+```
+
+#### 3.) Explain why the variables should be standardized before conducting PCA. (2 pts)
+
+In conducting PCA, we attempt to reduce the dimensions or fields of a dataset while keeping as much variation as reasonably possible. Without standardizing the data, you could end up having different magnitudes and scales of data. For example, when you have a column named Income which could have values of 50,000 php and another named life expectancy with an example value of 75. Differences in these magnitudes lead to the larger feature dominating the coefficients when PCA is conducted and is why standardizing the data, or setting all variables to have an approximate mean of 0 and standard deviation of 1 is necessary.
+
+#### 4.) Produce and briefly describe the correlation matrix. Identify at least two pairs of variables that show relatively strong positive or negative relationships. (2 pts)
+
+```{r}
+# Correlation Matrix
+df_cor <- round(cor(df_clean), 3)
+df_cor
+```
+
+The correlation matrix shows that Happiness (Ladder Score), Logged GDP per capita, Social Support, Healthy Life Expectancy and Freedom to make life choices are positively correlated while all these values are negatively correlated to Generosity and Perceptions of corruption. Interestingly, Logged GDP per capita and Healthy Life Expectancy (0.859) and Happiness or Ladder Score and Logged GDP per capita (0.790) both have really high positive correlation.
+
+### Part B – Principal Component Analysis
+
+#### 1.) Conduct PCA using the correlation matrix. (2 pts)
+
+```{r}
+pca_df <- prcomp(
+  df_clean,
+  center = TRUE,
+  scale = TRUE
+)
+
+pca_df
+summary(pca_df)
+```
+
+#### 2.) Report the eigenvalues of the seven principal components. (2 pts)
+
+```{r}
+pca_eigen <- (pca_df$sdev)^2
+round(pca_eigen, 3)
+sum(pca_eigen)
+```
+
+Above are the eigenvalues of PC1 to PC7 respectively. Obtained by squaring the standard deviations as the eigenvalues are just the variance explained by the data. When summed, these equal p (the number of fields) or p=7.
+
+#### 3.) Report the proportion of variance explained by each component. (2 pts)
+
+```{r}
+round(pca_eigen/sum(pca_eigen), 3)
+```
+
+Obtained by dividing the variance by p, we see that PC1 explains 55.9% of the variance within these 7 variables. PC2 explains 18.4%, PC3 explains 10.1%, PC4 explains 7.4%, PC5 explains 3.6%, PC6 explains 2.8%, and finally PC7 explains 1.8%.
+
+#### 4.) Report the cumulative proportion of variance explained. (2 pts)
+
+```{r}
+round(cumsum(pca_eigen/sum(pca_eigen)), 3)
+```
+
+We see here that when we add the individual proportions which we obtained earlier, they equal 1. This means that PC1 + PC2 explains 74.3% of the variance from these 7 features. This increases as we choose to add more PCs until we reach PC7 and we can explain all the variance within these 7 features.
+
+#### 5.) Present the eigenvectors/component coefficients for the retained components. (2 pts)
+
+```{r}
+pca_df$rotation
+```
+
+#### 6.) Identify which variables have the largest absolute coefficients in the first principal component. (2 pts)
+
+```{r}
+sort(round(abs(pca_df$rotation[ ,1]), 3), decreasing = TRUE)
+```
+
+Happiness (Ladder score) has the largest absolute coefficient at 0.464. Next is Logged GDP per capita at 0.459. Third, Healthy Life expectancy at 0.453. Fourth is Social Support at 0.433. These four values are close compared to the rest.
+
+### Part C - Determining the Number of Components
+
+#### 1.) Construct a scree plot of the eigenvalues. (3 pts)
+
+```{r}
+plot(pca_eigen, type = "b",
+     xlab = "Principal Component",
+     ylab = "Eigenvalue"
+     )
+
+abline(h = 1, lty = 2, col = "red")
+```
+
+#### 2.) Identify the apparent elbow in the scree plot. (2 pts)
+
+The evident elbow is PC2 as PC1 drops quite substantially to PC2 (from eigenvalue of 3.914 to 1.289) then gradually from PC2 onwards.
+
+#### 3.) Apply the Kaiser criterion by identifying components with eigenvalues greater than 1. (2 pts)
+
+```{r}
+which((pca_eigen) > 1)
+```
+
+#### PC1 (3.914) and PC2 (1.289) have eigenvalues greater than 1.
+
+#### 4.) Based on the scree plot, eigenvalues, and cumulative variance explained, determine an appropriate number of components to retain. (2 pts)
+
+Based on all these criteria and given that the elbow point which is PC2 and that the Kaiser criterion chooses PC1 and PC2 to be retained, it is appropriate that these two Principal Components are chosen. Thus, we will keep PC1 and PC2.
+
+#### 5.) Briefly explain why the number of components retained should not be determined using only one criterion. (1 pt)
+
+Like any conclusions, the more evidence and the more rigorous the process, then the more sure we are that the outcome is as accurate as possible which is the desired result.
+
+### Part D - Interpretation of Principal Components
+
+#### 1.) Interpret Principal Component 1 (PC1) in terms of the variables with the largest positive or negative coefficients. (3 pts)
+
+```{r}
+pca_df$rotation[ ,1]
+```
+
+Ladder score (-0.464), GDP per capita (-0.459), Social support (-0.433), and healthy life expectancy (-0.453) are significant and move in the same direction for PC1. Similarly, freedom to make life choices moves in the same direction but in a lower magnitude (-0.341) while Perceptions of corruption appears to move in the opposite direction to the aforementioned variables and less strongly (0.252). It is important to understand that the signs of the variables here indicate only a direction and are not a concrete basis for their relationships for well-being, only that they are the sign they have from the convention of this software.
+
+#### 2.) Interpret Principal Component 2 (PC2) in the same manner. (2 pts)
+
+```{r}
+pca_df$rotation[ ,2]
+```
+
+For PC2, Generosity is very significant (0.753) and moves at the same direction as Freedom to make life choices which has a much smaller but still significant coefficient (0.365). Perceptions of corruption contributes in the opposite direction fairly well (-0.460). All other variables were not strong contributors for PC2, particularly the ladder score (0.040).
+
+#### 3.) Give an appropriate descriptive name or label for PC1 based on its variable loadings and explain your choice. (2 pts)
+
+PC1 may be described as "General Well Being through Socioeconomic Development and Health". This is because the largest coefficient comes from the Ladder score which is the general subjective perception of happiness of a country's population. This ladder score moves alongside GDP per capita, Social Support, and Freedom to make life choices while being opposed by Perceptions of corruption which, altogether, one can consider as socioeconomic factors affecting happiness. Furthermore, Healthy life expectancy is also quite significant in PC1 which is why it is considered in the descriptive label.
+
+#### 4.) Explain how many original variables can potentially be represented by the retained components. (1 pt)
+
+Given that the Principal Components are linear combinations of the coefficients and the seven original variables, then potentially all of the original variables can be represented. The degree, however, varies depending on the corresponding coefficients of each variable in PC1 and PC2. With the results obtained earlier, it seems all the variables were represented, though not all at once and not necessarily in the same Principal Components.
+
+#### 5.) Write a short conclusion explaining what PCA reveals about the underlying dimensions of cross-country well-being in this dataset. (2 pts)
+
+Given the 7 variables chosen for this study (Ladder score, GDP per capita, Social support, Healthy life expectancy, Freedom to make life choices, Generosity, and Perceptions of corruption), the Principal Component Analysis revealed a broad relation between well-being, socioeconomic development, and health. PC1, labeled "General Well Being through Socioeconomic Development and Health" was majorly dictated by Ladder score, GDP per capita, Social support, and Healthy life expectancy. PC2, unlabeled, emphasized Generosity, Freedom to make life choices, and Perceptions of corruption. Overall, PCA allowed the studying of the same variables and their summarization through fewer dimensions while retaining a sizable amount of the original variation (PC1 + PC2 explains 74.3%).
